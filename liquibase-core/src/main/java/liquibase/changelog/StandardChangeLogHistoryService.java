@@ -35,6 +35,8 @@ import liquibase.structure.core.Table;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.temporal.Temporal;
 import java.util.*;
 
 public class StandardChangeLogHistoryService extends AbstractChangeLogHistoryService {
@@ -322,14 +324,23 @@ public class StandardChangeLogHistoryService extends AbstractChangeLogHistorySer
                     Date dateExecuted = null;
                     if (tmpDateExecuted instanceof Date) {
                         dateExecuted = (Date) tmpDateExecuted;
-                    } else {
-                        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                    } else if (tmpDateExecuted instanceof Temporal) {
+                        final Temporal temporal = (Temporal) tmpDateExecuted;
                         try {
-                            dateExecuted = df.parse((String) tmpDateExecuted);
+                            final Instant instant = Instant.from(temporal);
+                            dateExecuted = Date.from(instant);
+                        } catch (Exception e) {
+                            // ignore Exception and assume dateExecuted == null instead of aborting.
+                        }
+                    } else {
+                        final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        try {
+                            dateExecuted = df.parse(Objects.toString(df));
                         } catch (ParseException e) {
                             // Ignore ParseException and assume dateExecuted == null instead of aborting.
                         }
                     }
+
                     String tmpOrderExecuted = rs.get("ORDEREXECUTED").toString();
                     Integer orderExecuted = ((tmpOrderExecuted == null) ? null : Integer.valueOf(tmpOrderExecuted));
                     String tag = (rs.get("TAG") == null) ? null : rs.get("TAG").toString();
